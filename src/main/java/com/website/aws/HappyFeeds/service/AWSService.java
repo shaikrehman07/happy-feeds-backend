@@ -245,8 +245,6 @@ public class AWSService {
             System.err.println(e.getMessage());
             System.exit(1);
         }
-
-        System.out.println("Done!");
     }
 
     public UserLoginResponseModel loginUser(UserLoginRequestModel loginDetails) {
@@ -472,8 +470,6 @@ public class AWSService {
             System.err.println(e.getMessage());
             System.exit(1);
         }
-
-        System.out.println("Done!");
     }
 
     private void updateTableForAcceptRequest(String currentUserEmail, String otherUserEmail) {
@@ -510,8 +506,6 @@ public class AWSService {
             System.err.println(e.getMessage());
             System.exit(1);
         }
-
-        System.out.println("Done!");
     }
 
     public List<String> getFriends(String userEmail, String status) {
@@ -535,10 +529,6 @@ public class AWSService {
             List<AttributeValue> friendRequests = returnedItem.get("friend_request").l();
             Map<String, AttributeValue> friendsList = returnedItem.get("friends").m();
 
-            System.out.println(friendRequests);
-            System.out.println(friendsList);
-            //System.out.println(friendRequests.get(0).m().get("sentBy").s().equals(userEmail)?friendRequests.get(0).m().get("sentTo").s():friendRequests.get(0).m().get("sentBy").s());
-
             result = friendRequests.stream().filter(val -> status.equals(
                     friendsList.get(val.m().get("sentBy").s().equals(userEmail) ? val.m().get("sentTo").s() : val.m().get("sentBy").s()).s()
             )).map(val -> val.m().get("sentBy").s().equals(userEmail) ? val.m().get("sentTo").s() : val.m().get("sentBy").s()).collect(Collectors.toList());
@@ -548,8 +538,6 @@ public class AWSService {
             System.err.println(e.getMessage());
             System.exit(1);
         }
-
-        System.out.println(result);
 
         return result;
     }
