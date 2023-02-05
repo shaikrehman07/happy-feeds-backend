@@ -217,10 +217,9 @@ public class AWSService {
             ddb.updateItem(request);
         } catch (ResourceNotFoundException e) {
             System.err.println(e.getMessage());
-            System.exit(1);
-        } catch (DynamoDbException e) {
+        }
+        catch (DynamoDbException e) {
             System.err.println(e.getMessage());
-            System.exit(1);
         }
     }
 
