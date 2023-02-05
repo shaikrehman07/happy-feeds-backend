@@ -181,38 +181,6 @@ public class AWSService {
         return res;
     }
 
-    private String getFriendStatus(String userEmail, String otherUserEmail) {
-        String res = "";
-        DynamoDbClient ddb = awsConfig.getDynamoDBClient();
-
-        HashMap<String, AttributeValue> keyToGet = new HashMap<String, AttributeValue>();
-
-        keyToGet.put("id", AttributeValue.builder()
-                .s(userEmail).build());
-
-        GetItemRequest request = GetItemRequest.builder()
-                .key(keyToGet)
-                .tableName("happy-feeds-user-data")
-                .projectionExpression("friends")
-                .build();
-
-        try {
-            Map<String, AttributeValue> returnedItem = ddb.getItem(request).item();
-
-            Map<String, AttributeValue> friendsList = returnedItem.get("friends").m();
-
-            if (friendsList.containsKey((otherUserEmail))) {
-                res = friendsList.get(otherUserEmail).s();
-            }
-
-        } catch (DynamoDbException e) {
-            System.out.println(e.getMessage());
-            System.exit(1);
-        }
-
-        return res;
-    }
-
     private void updateFeedOrCaption(String userEmail, boolean caption, String value) {
 
         String updateExpression = caption ? "SET memories=list_append(memories, :attrValue)" : "SET feeds=list_append(feeds, :attrValue)";
@@ -227,7 +195,16 @@ public class AWSService {
                 new HashMap<String, AttributeValue>();
 
         // Update the column specified by name with updatedVal
-        updatedValues.put(":attrValue", AttributeValue.builder().l(AttributeValue.fromS(value)).build());
+        if(!caption) {
+            updatedValues.put(":attrValue", AttributeValue.builder().l(AttributeValue.fromS(value)).build());
+        }
+        else{
+            HashMap<String, AttributeValue> updatedValueMap =
+                    new HashMap<String, AttributeValue>();
+            updatedValueMap.put("caption", AttributeValue.fromS(value));
+            updatedValueMap.put("likes", AttributeValue.fromM(new HashMap<>()));
+            updatedValues.put(":attrValue", AttributeValue.builder().l(AttributeValue.fromM(updatedValueMap)).build());
+        }
 
         UpdateItemRequest request = UpdateItemRequest.builder()
                 .tableName("happy-feeds-user-data")
@@ -672,10 +649,10 @@ public class AWSService {
         GetItemRequest request = GetItemRequest.builder()
                 .key(keyToGet)
                 .tableName("happy-feeds-user-data")
-                .projectionExpression("feeds, memories")
+                .projectionExpression("feeds")
                 .build();
         Map<String, AttributeValue> returnedItem = ddb.getItem(request).item();
-
+        
         List<AttributeValue> feeds = returnedItem.get("feeds").l();
 
         List<UserFeeds> userFeeds = new ArrayList<>();
@@ -687,6 +664,7 @@ public class AWSService {
             feedDetails.setName(feedInfo.get(1));
             feedDetails.setCaption(feedInfo.get(2));
             feedDetails.setImage(feedInfo.get(3));
+            feedDetails.setImgIndex(Integer.parseInt(feedInfo.get(4)));
 
             userFeeds.add(feedDetails);
         }
@@ -705,6 +683,7 @@ public class AWSService {
         res.add(userEmail);
 
         DynamoDbClient ddb = awsConfig.getDynamoDBClient();
+
         HashMap<String, AttributeValue> keyToGet = new HashMap<String, AttributeValue>();
         keyToGet.put("id", AttributeValue.builder()
                 .s(userEmail).build());
@@ -723,10 +702,10 @@ public class AWSService {
         String[] imgDetails = imgName.split(".");
         int captionInd = Integer.parseInt(imgName.substring(3, imgName.indexOf(".")));
 
-        String cap = memories.get(captionInd - 1).s();
+        Map<String, AttributeValue> memoriesDetails = memories.get(captionInd - 1).m();
 
         //caption
-        res.add(cap);
+        res.add(memoriesDetails.get("caption").s());
 
 
         S3Client awsS3Client = awsConfig.getAwsS3Client();
@@ -741,8 +720,75 @@ public class AWSService {
 
         //img
         res.add(new String(data));
+        //imgIndex
+        res.add(String.valueOf(captionInd));
 
         return res;
+    }
+
+    public Likes getLikes(String otherUserEmail, String currentUserEmail, int imgIndex){
+        Likes likeData = new Likes();
+
+        likeData.setLikedByYou(false);
+
+        DynamoDbClient ddb = awsConfig.getDynamoDBClient();
+
+        HashMap<String, AttributeValue> keyToGet = new HashMap<String, AttributeValue>();
+        keyToGet.put("id", AttributeValue.builder()
+                .s(otherUserEmail).build());
+
+        GetItemRequest request = GetItemRequest.builder()
+                .key(keyToGet)
+                .tableName("happy-feeds-user-data")
+                .projectionExpression("memories")
+                .build();
+
+        Map<String, AttributeValue> returnedItem = ddb.getItem(request).item();
+        List<AttributeValue> memories = returnedItem.get("memories").l();
+
+        Map<String, AttributeValue> memoriesValue = memories.get(imgIndex-1).m();
+
+        Map<String, AttributeValue> likesList = memoriesValue.get("likes").m();
+
+        if(likesList.containsKey(currentUserEmail)){
+            likeData.setLikedByYou(true);
+        }
+        likeData.setLikes(likesList.size());
+
+
+        return likeData;
+    }
+
+    public void postLike(String otherUserEmail, String currentUserEmail, int imgIndex){
+        DynamoDbClient ddb = awsConfig.getDynamoDBClient();
+
+        HashMap<String, AttributeValue> keyToGet = new HashMap<String, AttributeValue>();
+        keyToGet.put("id", AttributeValue.builder()
+                .s(otherUserEmail).build());
+
+
+        HashMap<String, AttributeValue> updatedValues1 =
+                new HashMap<String, AttributeValue>();
+        HashMap<String, String> updatedValues2 =
+                new HashMap<String, String>();
+
+
+        updatedValues1.put(":attrValue", AttributeValue.builder().s("").build());
+        //updatedValues1.put(":ind", AttributeValue.builder().s(String.valueOf(imgIndex-1)).build());
+        updatedValues2.put("#attrKey", currentUserEmail);
+
+        imgIndex = imgIndex-1;
+
+        UpdateItemRequest request1 = UpdateItemRequest.builder()
+                .tableName("happy-feeds-user-data")
+                .key(keyToGet)
+                .updateExpression("SET memories["+imgIndex+"].likes.#attrKey = :attrValue")
+                .expressionAttributeNames(updatedValues2)
+                .expressionAttributeValues(updatedValues1)
+                .build();
+
+
+            ddb.updateItem(request1);
     }
 
     public HttpHeaders headers() {

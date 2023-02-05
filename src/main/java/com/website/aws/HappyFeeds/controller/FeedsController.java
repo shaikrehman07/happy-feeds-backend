@@ -116,7 +116,7 @@ public class FeedsController {
         return ResponseEntity.ok().body(awsService.getFriends(currentUserEmail, "Request Sent"));
     }
 
-    @PostMapping(value = "/uploadDP", consumes = "text/plain")
+    @PostMapping(value = "/uploadDP", consumes = MediaType.TEXT_PLAIN_VALUE)
     public ResponseEntity<String> uploadDP(@RequestParam("email") String userEmail, @RequestBody String file,@RequestHeader("AccessToken") String accessToken) throws TokenException {
         boolean tokenValid = awsService.verifyJWT(accessToken);
         if (!tokenValid) throw new TokenException("Token not valid");
@@ -135,6 +135,16 @@ public class FeedsController {
         boolean tokenValid = awsService.verifyJWT(accessToken);
         if (!tokenValid) throw new TokenException("Token not valid");
         return ResponseEntity.ok().body(awsService.getUserHome(userEmail));
+    }
+
+    @GetMapping("/likes/{otherUserEmail}/{currentUserEmail}")
+    public ResponseEntity<Likes> getLikes(@PathVariable("otherUserEmail") String otherUserEmail, @PathVariable("currentUserEmail") String currentUserEmail, @RequestParam("imgIndex") int imgIndex){
+        return ResponseEntity.ok().body(awsService.getLikes(otherUserEmail, currentUserEmail, imgIndex));
+    }
+
+    @PostMapping("/likes/{otherUserEmail}/{currentUserEmail}")
+    public void postLike(@PathVariable("otherUserEmail") String otherUserEmail, @PathVariable("currentUserEmail") String currentUserEmail, @RequestParam("imgIndex") int imgIndex){
+        awsService.postLike(otherUserEmail, currentUserEmail, imgIndex);
     }
 
 }

@@ -11,4 +11,5 @@ public class UserFeeds {
     private String image;
     private String email;
     private String caption;
+    private int imgIndex;
 }
