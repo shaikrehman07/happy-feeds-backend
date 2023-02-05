@@ -791,6 +791,34 @@ public class AWSService {
             ddb.updateItem(request1);
     }
 
+    public List<UserSearchModel> getAllOtherUsers(String userEmail){
+        List<UserSearchModel> result = new ArrayList<>();
+
+        DynamoDbClient ddb = awsConfig.getDynamoDBClient();
+
+        ScanRequest request =
+                ScanRequest
+                        .builder()
+                        .tableName("happy-feeds-user-data")
+                        .projectionExpression("id, fullName")
+                        .build();
+        ScanIterable response = ddb.scanPaginator(request);
+
+        for (ScanResponse page : response) {
+            for (Map<String, AttributeValue> item : page.items()) {
+                // Consume the item
+                if(!userEmail.equals(item.get("id").s())) {
+                    UserSearchModel userSearchModel = new UserSearchModel();
+                    userSearchModel.setEmail(item.get("id").s());
+                    userSearchModel.setFullName(item.get("fullName").s());
+                    result.add(userSearchModel);
+                }
+            }
+        }
+
+        return result;
+    }
+
     public HttpHeaders headers() {
         HttpHeaders responseHeaders = new HttpHeaders();
         responseHeaders.set("IdToken", getIdToken());

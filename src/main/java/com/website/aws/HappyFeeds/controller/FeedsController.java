@@ -138,13 +138,24 @@ public class FeedsController {
     }
 
     @GetMapping("/likes/{otherUserEmail}/{currentUserEmail}")
-    public ResponseEntity<Likes> getLikes(@PathVariable("otherUserEmail") String otherUserEmail, @PathVariable("currentUserEmail") String currentUserEmail, @RequestParam("imgIndex") int imgIndex){
+    public ResponseEntity<Likes> getLikes(@PathVariable("otherUserEmail") String otherUserEmail, @PathVariable("currentUserEmail") String currentUserEmail, @RequestParam("imgIndex") int imgIndex, @RequestHeader("AccessToken") String accessToken) throws TokenException {
+        boolean tokenValid = awsService.verifyJWT(accessToken);
+        if (!tokenValid) throw new TokenException("Token not valid");
         return ResponseEntity.ok().body(awsService.getLikes(otherUserEmail, currentUserEmail, imgIndex));
     }
 
     @PostMapping("/likes/{otherUserEmail}/{currentUserEmail}")
-    public void postLike(@PathVariable("otherUserEmail") String otherUserEmail, @PathVariable("currentUserEmail") String currentUserEmail, @RequestParam("imgIndex") int imgIndex){
+    public void postLike(@PathVariable("otherUserEmail") String otherUserEmail, @PathVariable("currentUserEmail") String currentUserEmail, @RequestParam("imgIndex") int imgIndex, @RequestHeader("AccessToken") String accessToken) throws TokenException {
+        boolean tokenValid = awsService.verifyJWT(accessToken);
+        if (!tokenValid) throw new TokenException("Token not valid");
         awsService.postLike(otherUserEmail, currentUserEmail, imgIndex);
+    }
+
+    @GetMapping("/{currentUserEmail}/allOtherUsers")
+    public ResponseEntity<List<UserSearchModel>> getAllOtherUsers(@PathVariable String currentUserEmail, @RequestHeader("AccessToken") String accessToken) throws TokenException {
+        boolean tokenValid = awsService.verifyJWT(accessToken);
+        if (!tokenValid) throw new TokenException("Token not valid");
+        return ResponseEntity.ok().body(awsService.getAllOtherUsers(currentUserEmail));
     }
 
 }
